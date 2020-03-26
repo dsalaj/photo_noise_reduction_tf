@@ -90,57 +90,11 @@ from tensorflow.keras.models import Model, Sequential
 def make_model(kernel_l2=0.0001, act_l1=0.0001, n_kernels=8):
     # I have used the functional API instead of sequential API because it allows me to
     # create the model with more flexibility when connecting layers.
-    # More specifically this is required for the Suvtract layer as it receives both the
+    # More specifically this is required for the Subtract layer as it receives both the
     # previous layer and the first layer as inputs
-    # i = tf.keras.layers.TimeDistributed(Input(shape=(256, 256, 1)))
-    # m = tf.keras.layers.TimeDistributed(Conv2D(n_kernels, (3, 3), padding='same', dilation_rate=1, activation= None,
-    #            kernel_regularizer=tf.keras.regularizers.l2(kernel_l2),
-    #            activity_regularizer=tf.keras.regularizers.l1(act_l1)))(i)
-    # m = tf.keras.layers.TimeDistributed(BatchNormalization())(m)
-    # m = tf.keras.layers.TimeDistributed(Activation('relu'))(m)
-
-    # # m = tf.keras.layers.TimeDistributed(m),
-    # ## i = Input(shape=(5, 256, 256, 1))
-    # ## m = tf.keras.layers.ConvLSTM2D(filters=n_kernels, kernel_size=(3, 3), padding='same', return_sequences=False)(i)
-    # # m = Conv2D(n_kernels, (3, 3), padding='same', dilation_rate=1, activation= None,
-    # #            kernel_regularizer=tf.keras.regularizers.l2(kernel_l2),
-    # #            activity_regularizer=tf.keras.regularizers.l1(act_l1))(m)
-    # # m = BatchNormalization()(m)
-    # # m = Activation('relu')(m)
-    # o = tf.keras.layers.TimeDistributed(Conv2D(1, (3, 3), padding='same', dilation_rate=1, activation= None,
-    #            kernel_regularizer=tf.keras.regularizers.l2(kernel_l2),
-    #            activity_regularizer=tf.keras.regularizers.l1(act_l1)))(m)
-    # # Subtract layer allows the network to focus only on learning to extract the noise part of the input
-    # o = tf.keras.layers.Subtract()([i, o])
-    # model = Model(inputs=i, outputs=o)
-    # # cnn_rnn = tf.keras.models.Sequential([
-    # #     tf.keras.layers.TimeDistributed(cnn),
-    # #     tf.keras.layers.ConvLSTM2D(filters=n_kernels, kernel_size=(3, 3), padding='same', return_sequences=False)
-    # # ])
-    # model = Sequential()
-    # # model.add(TimeDistributed(Conv2D(n_kernels, (3, 3), padding='same', dilation_rate=1, activation=None), input_shape=(5, 256, 256, 1)))
-    # # model.add(TimeDistributed(BatchNormalization()))
-    # # model.add(TimeDistributed(Activation('relu')))
-    # # model.add(TimeDistributed(Conv2D(1, (3, 3), padding='same', dilation_rate=1, activation=None), input_shape=(5, n_kernels, 256, 256, 1)))
-    # model.add(TimeDistributed(Conv2D(1, (3, 3), padding='same', dilation_rate=1, activation=None), input_shape=(5, 256, 256, 1)))
-    # model.add(TimeDistributed(BatchNormalization()))
-    # model.add(TimeDistributed(Activation('relu')))
-    # # model.add(TimeDistributed(Reshape((256 * 256,))))
-    # # model.add(Reshape((256 * 256, 5,)))
-    # # model.add(Reshape((256 * 256 * 5, 1,)))
-
-    # # model.add(Reshape((256 * 256, 5,)))
-    # # model.add(TimeDistributed(Dense(1)))
-    # model.add(Lambda(lambda x: tf.keras.backend.mean(x, axis=1)))
-    # model.add(Reshape((256, 256, 1,)))
-    # # model.add(Flatten())
-    # # model.add(LSTM(units=32, return_sequences=True))
-    # # model.add(TimeDistributed(Dense(1)))
-    # # model.add(Reshape((5, 256, 256, 1)))
-    # # model.add(tf.keras.layers.Lambda(lambda x: x[-1]))
-
     i = Input(shape=(5, 256, 256, 1))
-    m = TimeDistributed(Conv2D(n_kernels, (3, 3), padding='same', dilation_rate=1, activation=None), input_shape=(5, 256, 256, 1))(i)
+    m = TimeDistributed(Conv2D(n_kernels, (3, 3), padding='same', dilation_rate=1, activation=None),
+                        input_shape=(5, 256, 256, 1))(i)
     m = TimeDistributed(BatchNormalization())(m)
     m = TimeDistributed(Activation('relu'))(m)
     m = TimeDistributed(Conv2D(1, (3, 3), padding='same', dilation_rate=1, activation=None))(i)
@@ -148,8 +102,9 @@ def make_model(kernel_l2=0.0001, act_l1=0.0001, n_kernels=8):
     m = TimeDistributed(Activation('relu'))(m)
 
     o = tf.keras.layers.Subtract()([i, m])
-    o = Lambda(lambda x: tf.keras.backend.mean(x, axis=1))(o)
+    o = Lambda(lambda x: tf.keras.backend.mean(x, axis=1))(o)  # Average over "time" (patches)
     o = Reshape((256, 256, 1,))(o)
+
     model = Model(inputs=i, outputs=o)
     model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=1e-3),
                   loss=tf.losses.MeanSquaredError())
@@ -160,7 +115,7 @@ def make_model(kernel_l2=0.0001, act_l1=0.0001, n_kernels=8):
 
 model = make_model()
 
-# model = tf.keras.models.load_model('model_err0.00050.h5')
+model = tf.keras.models.load_model('model_err0.00050.h5')
 
 
 
